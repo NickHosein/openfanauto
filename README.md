@@ -33,16 +33,17 @@ docker compose logs -f
 ### Unraid Production
 
 ```bash
-# 1. Prepare appdata
+# 1. Prepare appdata — copy the template config and set your hardware port
 mkdir -p /mnt/user/appdata/openfanauto
 cp config/config.yaml /mnt/user/appdata/openfanauto/
-# Edit config.yaml for your hardware port and drive list
+# Edit ONLY the hardware.port value (e.g. /dev/ttyUSB0).
+# Everything else — profiles, fan assignments, smartctl devices — is configured through the Web UI.
 
 # 2. Build & start
 docker compose -f docker-compose.prod.yml up -d
 
-# 3. Verify
-curl http://localhost:3211/api/v0/info
+# 3. Open the Web UI → http://your-unraid-ip:3211
+#    Create profiles, assign fans, and click 'Save' to persist.
 ```
 
 ---
@@ -75,6 +76,10 @@ All endpoints prefixed with `/api/v0/`. Responses are JSON: `{"status": "ok|fail
 | GET | `/profiles/set?name=` | Activate a profile (switches matching fans to auto) |
 | POST | `/profiles/add` | Add/update a profile (body: `name`, `type`, `points` JSON, `tempsource`, `usepwm`) |
 | GET | `/profiles/remove?name=` | Delete a profile |
+| POST | `/controls/assign` | Assign a profile to a fan (`fan=0&profile=QuietMode`) |
+| POST | `/config/update` | Bulk-update config keys (JSON body) |
+| GET | `/config/save` | Persist all in-memory changes to `config.yaml` |
+| GET | `/config/reload` | Reload config from disk (undo unsaved changes) |
 | GET | `/alias/all/get` | All fan aliases |
 | GET | `/alias/{n}/get` | Single fan alias |
 | GET | `/alias/{n}/set?value=` | Set fan alias |

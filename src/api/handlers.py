@@ -197,26 +197,35 @@ class ProfileSetHandler(BaseHandler):
 
 class ProfileAddHandler(BaseHandler):
     def post(self) -> None:
+        """Add or update a fan profile.  Persists to in-memory config immediately."""
         profile_name = self.get_argument("name", None)
         curve_type = self.get_argument("type", "threshold")
         points_raw = self.get_argument("points", "{}")
+        temp_source = self.get_argument("tempsource", "")
+        use_pwm = self.get_argument("usepwm", "false").lower() == "true"
+
         if not profile_name:
             return self.write_fail("Profile name required")
+
         import json
 
         try:
             points = json.loads(points_raw)
         except json.JSONDecodeError:
-            return self.write_fail("Points must be valid JSON (e.g. {\"30\": 20, \"50\": 80})")
-        data = self.config.all()
-        if "fan_profiles" not in data:
-            data["fan_profiles"] = {}
-        data["fan_profiles"][profile_name] = {
-            "CurveType": curve_type,
-            "Points": {str(k): int(v) for k, v in points.items()},
-        }
-        # We don't directly write — we'll use save after modifying the in-memory copy
-        self.write_ok(f"Profile '{profile_name}' added (use save endpoint to persist)")
+            return self.write_fail('Points must be valid JSON (e.g. {"30": 20, "50": 80})')
+
+        sources = [s.strip() for s in temp_source.split(",") if s.strip()]
+
+        self.config.set(
+            f"fan_profiles.{profile_name}",
+            {
+                "CurveType": curve_type,
+                "TempSource": sources,
+                "UsePWM": use_pwm,
+                "Points": {str(k): int(v) for k, v in points.items()},
+            },
+        )
+        self.write_ok(f"Profile '{profile_name}' saved in memory.  Click 'Save' to persist.")
 
 
 class ProfileRemoveHandler(BaseHandler):
@@ -224,12 +233,54 @@ class ProfileRemoveHandler(BaseHandler):
         name = self.get_argument("name", None)
         if not name:
             return self.write_fail("Profile name required")
-        data = self.config.all()
-        profiles = data.get("fan_profiles", {})
-        if name not in profiles:
+        if not self.config.get(f"fan_profiles.{name}"):
             return self.write_fail(f"Profile '{name}' not found")
-        del profiles[name]
-        self.write_ok(f"Profile '{name}' removed")
+        # Remove the profile from fan_controls too
+        controls = self.config.get("fan_controls", {})
+        for fan_id_str, ctrl in list(controls.items()):
+            if ctrl.get("AssignedProfile") == name:
+                self.config.set(f"fan_controls.{fan_id_str}.AssignedProfile", "")
+        self.config.delete(f"fan_profiles.{name}")
+        self.write_ok(f"Profile '{name}' removed.  Click 'Save' to persist.")
+
+
+class ControlAssignHandler(BaseHandler):
+    """Assign a profile to a specific fan (or clear the assignment)."""
+
+    def post(self) -> None:
+        fan_id = self.get_argument("fan", None)
+        profile = self.get_argument("profile", "")
+        if fan_id is None:
+            return self.write_fail("Fan ID required")
+        idx = self._fan_idx(fan_id)
+        if idx is None:
+            return self.write_fail(f"Invalid fan index: {fan_id}")
+        # If a profile name is provided, validate it exists
+        if profile and not self.config.get(f"fan_profiles.{profile}"):
+            return self.write_fail(f"Profile '{profile}' not found")
+        self.config.set(f"fan_controls.{idx}.AssignedProfile", profile)
+        if profile:
+            self.commander.set_fan_mode(idx, "auto")
+            self.write_ok(f"Fan #{idx + 1} assigned to profile '{profile}' (mode → auto)")
+        else:
+            self.commander.set_fan_mode(idx, "manual")
+            self.write_ok(f"Fan #{idx + 1} unassigned (mode → manual)")
+
+
+class ConfigUpdateHandler(BaseHandler):
+    """Update arbitrary config keys via POST with JSON body."""
+
+    def post(self) -> None:
+        import json
+        try:
+            body = json.loads(self.request.body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return self.write_fail("Request body must be valid JSON")
+        if not isinstance(body, dict):
+            return self.write_fail("Request body must be a JSON object")
+        for key, value in body.items():
+            self.config.set(key, value)
+        self.write_ok(f"{len(body)} config key(s) updated.  Click 'Save' to persist.")
 
 
 class ConfigSaveHandler(BaseHandler):
@@ -239,6 +290,15 @@ class ConfigSaveHandler(BaseHandler):
             self.write_ok("Configuration saved")
         else:
             self.write_fail("Failed to save configuration")
+
+
+class ConfigReloadHandler(BaseHandler):
+    def get(self) -> None:
+        ok = self.config.reload()
+        if ok:
+            self.write_ok("Configuration reloaded from disk")
+        else:
+            self.write_fail("Failed to reload configuration")
 
 
 # ---------------------------------------------------------------------------

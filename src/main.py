@@ -25,7 +25,10 @@ import tornado.web
 
 from api.handlers import (  # pylint: disable=unused-import
     AutomationHandler,
+    ConfigReloadHandler,
     ConfigSaveHandler,
+    ConfigUpdateHandler,
+    ControlAssignHandler,
     Default404Handler,
     FanAliasAllHandler,
     FanAliasGetHandler,
@@ -104,6 +107,10 @@ def make_app(
         (r"/api/v0/profiles/remove", ProfileRemoveHandler, init_kwargs),
         # Config
         (r"/api/v0/config/save", ConfigSaveHandler, init_kwargs),
+        (r"/api/v0/config/reload", ConfigReloadHandler, init_kwargs),
+        (r"/api/v0/config/update", ConfigUpdateHandler, init_kwargs),
+        # Controls (profile assignment)
+        (r"/api/v0/controls/assign", ControlAssignHandler, init_kwargs),
         # Sensors
         (r"/api/v0/sensors", SensorsHandler, init_kwargs),
         # Info

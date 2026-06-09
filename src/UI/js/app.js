@@ -410,18 +410,20 @@ document.getElementById("btn-save-curve").addEventListener("click", async () => 
     });
     const j = await r.json();
     if (j.status === "ok") {
-      alert(`Profile '${name}' saved!`);
+      flashMsg(`Profile '${name}' saved in memory.`, "success");
       // Refresh profiles list
       const pData = await apiGet("/api/v0/profiles/list");
       state.profiles = pData.profiles || {};
       state.controls = pData.controls || {};
       populateProfileSelect();
       document.getElementById("curve-profile-select").value = name;
+      // Show assign-to-fan helper
+      showAssignUI(name);
     } else {
-      alert("Error: " + j.message);
+      flashMsg("Error: " + j.message, "danger");
     }
   } catch (e) {
-    alert("Failed to save profile: " + e);
+    flashMsg("Failed to save profile: " + e, "danger");
   }
 });
 
@@ -439,7 +441,88 @@ document.getElementById("btn-delete-curve").addEventListener("click", async () =
 });
 
 // =========================================================================
-// 7.  Initialisation
+// 7.  Save-to-disk, flash messages, assign-to-fan
+// =========================================================================
+
+/** Show a non-blocking flash message toast at the top of the page. */
+function flashMsg(message, type) {
+  const container = document.querySelector(".page-body .container-xl");
+  if (!container) return;
+  const alert = document.createElement("div");
+  alert.className = `alert alert-${type || "success"} alert-dismissible fade show`;
+  alert.role = "alert";
+  alert.style.marginBottom = "1rem";
+  alert.innerHTML = `${message} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+  container.insertBefore(alert, container.firstChild);
+  setTimeout(() => {
+    if (alert.parentNode) alert.parentNode.removeChild(alert);
+  }, 5000);
+}
+
+/** Show a fan-assignment dropdown after a profile is saved. */
+function showAssignUI(profileName) {
+  // Remove any existing assign row
+  const old = document.getElementById("assign-row");
+  if (old) old.remove();
+
+  const cardBody = document.querySelector("#curve-points-table").closest(".card-body");
+  if (!cardBody) return;
+
+  const fans = state.fans || [];
+  if (!fans.length) return;
+
+  const row = document.createElement("div");
+  row.id = "assign-row";
+  row.className = "mt-3 pt-3 border-top";
+  row.innerHTML = `
+    <label class="form-label">Assign '${escHtml(profileName)}' to fan:</label>
+    <div class="d-flex gap-2">
+      <select class="form-select" id="assign-fan-select">
+        <option value="">— choose fan —</option>
+        ${fans.map(f => `<option value="${f.id}">${escHtml(f.alias || `Fan #${f.id + 1}`)}</option>`).join("")}
+      </select>
+      <button class="btn btn-outline-primary" id="btn-assign-fan">Assign</button>
+    </div>
+  `;
+  cardBody.appendChild(row);
+
+  document.getElementById("btn-assign-fan").addEventListener("click", async () => {
+    const fanId = document.getElementById("assign-fan-select").value;
+    if (!fanId) return;
+    try {
+      const r = await fetch("/api/v0/controls/assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ fan: fanId, profile: profileName }),
+      });
+      const j = await r.json();
+      flashMsg(j.message, j.status === "ok" ? "success" : "danger");
+      // Refresh controls
+      const pData = await apiGet("/api/v0/profiles/list");
+      state.controls = pData.controls || {};
+    } catch (e) {
+      flashMsg("Assign failed: " + e, "danger");
+    }
+  });
+}
+
+// Save to Disk button
+document.getElementById("btn-save-disk").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-save-disk");
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+  try {
+    const j = await apiCmd("/api/v0/config/save");
+    flashMsg(j.message, j.status === "ok" ? "success" : "danger");
+  } catch (e) {
+    flashMsg("Save failed: " + e, "danger");
+  }
+  btn.disabled = false;
+  btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg> Save`;
+});
+
+// =========================================================================
+// 8.  Initialisation
 // =========================================================================
 
 async function init() {
