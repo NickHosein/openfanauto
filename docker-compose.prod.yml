@@ -1,0 +1,40 @@
+# OpenFanAuto — production deployment for Unraid
+# Place this file on your Unraid server.
+#
+# Prerequisites:
+#   1. mkdir -p /mnt/user/appdata/openfanauto
+#   2. cp config/config.yaml /mnt/user/appdata/openfanauto/
+#   3. cp config/disks.ini /mnt/user/appdata/openfanauto/  (optional sample)
+#   4. Edit /mnt/user/appdata/openfanauto/config.yaml with your settings
+#
+# Usage:
+#   docker-compose -f docker-compose.prod.yml up -d
+#   docker-compose -f docker-compose.prod.yml logs -f
+
+version: "3.8"
+
+services:
+  openfanauto:
+    image: openfanauto:latest
+    container_name: openfanauto
+    restart: unless-stopped
+    ports:
+      - "3211:3211"
+    environment:
+      - MOCK_HARDWARE=false
+      - OPENFAN_POLL_INTERVAL=10
+      - OPENFAN_RELOAD_PROFILES=true
+      - OPENFAN_CONFIG=/mnt/user/appdata/openfanauto/config.yaml
+    devices:
+      # USB passthrough for real OpenFAN hardware — adjust to your device
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    volumes:
+      # Unraid disk temperatures
+      - "/var/local/emhttp/disks.ini:/var/local/emhttp/disks.ini:ro"
+      # Appdata — store config.yaml and disks.ini here
+      - "/mnt/user/appdata/openfanauto:/mnt/user/appdata/openfanauto:rw"
+      # smartctl needs access to block devices (read-only)
+      - "/dev:/dev:ro"
+    privileged: false
+    cap_add:
+      - SYS_RAWIO  # needed for smartctl to query drives

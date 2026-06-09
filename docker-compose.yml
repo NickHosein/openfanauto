@@ -1,0 +1,15 @@
+# OpenFanAuto — local development (mock hardware)
+version: "3.8"
+
+services:
+  openfanauto:
+    build: .
+    container_name: openfanauto
+    ports:
+      - "3211:3211"
+    environment:
+      - MOCK_HARDWARE=true
+      - OPENFAN_POLL_INTERVAL=10
+      - OPENFAN_RELOAD_PROFILES=true
+    volumes:
+      - ./config:/opt/openfanauto/config:ro

@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>OpenFanAuto</title>
+
+  <!-- Tabler CSS + Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.31.0/tabler-icons.min.css">
+  <link rel="stylesheet" href="css/app.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+  <!-- Tabler JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js" defer></script>
+  <!-- App -->
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <div class="page">
+    <!-- Header -->
+    <header class="navbar navbar-expand-md d-print-none">
+      <div class="container-xl">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-fan">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 13m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M12 17v.01"/><path d="M11 4a4 4 0 0 1 2 0a4 4 0 1 0 -2 0"/><path d="M4 11a4 4 0 0 1 0 2a4 4 0 1 0 0 -2"/><path d="M20 11a4 4 0 0 1 0 2a4 4 0 1 0 0 -2"/>
+          </svg>
+          OpenFanAuto
+        </h1>
+        <div class="navbar-nav flex-row order-md-last">
+          <span class="nav-item me-3 d-flex align-items-center">
+            <span class="status-dot me-2" id="status-dot"></span>
+            <span id="status-text" class="text-muted">Connecting...</span>
+          </span>
+          <button class="btn btn-sm btn-outline-primary me-2" id="btn-automation-toggle">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M12 3v3m0 12v3m-9 -9h3m12 0h3"/></svg>
+            Auto
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-wrapper">
+      <div class="page-body">
+        <div class="container-xl">
+
+          <!-- Fan Status Row -->
+          <div class="row row-cards mb-3" id="fan-tiles">
+          </div>
+
+          <!-- Controls Row -->
+          <div class="row mb-3">
+            <!-- Manual Control -->
+            <div class="col-lg-6">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">Manual Fan Control</h3>
+                </div>
+                <div class="card-body">
+                  <div class="mb-3">
+                    <label class="form-label">Fan</label>
+                    <select class="form-select" id="manual-fan-select">
+                    </select>
+                  </div>
+                  <div class="mb-3">
+                    <div class="form-check form-switch mb-2">
+                      <input class="form-check-input" type="checkbox" id="control-via-pwm">
+                      <label class="form-check-label" for="control-via-pwm">Control via PWM %</label>
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="manual-fan-value">Value: <span id="manual-value-label">1000 RPM</span></label>
+                    <input type="range" class="form-range" id="manual-fan-value" min="0" max="2000" value="1000" step="10">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Mode</label>
+                    <select class="form-select" id="manual-fan-mode">
+                      <option value="manual">Manual</option>
+                      <option value="auto">Auto</option>
+                    </select>
+                  </div>
+                  <button class="btn btn-primary w-100" id="btn-apply-manual">Apply</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- All Fans Quick Set -->
+            <div class="col-lg-6">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">All Fans</h3>
+                </div>
+                <div class="card-body">
+                  <div class="mb-3">
+                    <label class="form-label">Set all fans to: <span id="all-fans-value-label">50%</span></label>
+                    <input type="range" class="form-range" id="all-fans-value" min="0" max="100" value="50" step="1">
+                  </div>
+                  <button class="btn btn-primary w-100 mb-2" id="btn-all-fans-pwm">Apply to All Fans</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Temperature Tiles -->
+          <div class="row mb-3">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">Temperatures</h3>
+                  <div class="card-actions">
+                    <span class="text-muted small" id="temps-updated"></span>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="row g-3" id="temp-tiles">
+                    <div class="col-12 text-muted">Waiting for sensor data...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fan Curve Editor -->
+          <div class="row mb-3">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">Fan Curve Editor</h3>
+                  <div class="card-actions">
+                    <select class="form-select" id="curve-profile-select">
+                    </select>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-lg-8">
+                      <div style="position: relative; height: 350px;">
+                        <canvas id="curve-chart"></canvas>
+                      </div>
+                      <p class="text-muted small mt-2 mb-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12h4l3 8l4 -16l3 8h4"/></svg>
+                        Click on the chart to add a new point. Drag points to reposition. Right-click to delete.
+                      </p>
+                    </div>
+                    <div class="col-lg-4">
+                      <div class="mb-3">
+                        <label class="form-label">Curve Type</label>
+                        <select class="form-select" id="curve-type-select">
+                          <option value="threshold">Threshold</option>
+                          <option value="linear">Linear</option>
+                        </select>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Temperature Source</label>
+                        <input type="text" class="form-control" id="curve-temp-source" placeholder="disk1, disk2">
+                      </div>
+                      <div class="mb-3">
+                        <div class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" id="curve-use-pwm">
+                          <label class="form-check-label" for="curve-use-pwm">Use PWM (vs RPM)</label>
+                        </div>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Points</label>
+                        <div id="curve-points-table"></div>
+                      </div>
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-primary flex-fill" id="btn-save-curve">Save Profile</button>
+                        <button class="btn btn-outline-danger" id="btn-delete-curve">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Profile Modal -->
+  <div class="modal modal-blur fade" id="newProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">New Profile</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Profile Name</label>
+            <input type="text" class="form-control" id="new-profile-name" placeholder="e.g. QuietMode">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary ms-auto" id="btn-create-profile">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

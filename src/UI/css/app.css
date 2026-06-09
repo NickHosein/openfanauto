@@ -1,0 +1,87 @@
+/* OpenFanAuto — custom styles (Tabler overrides) */
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  background-color: var(--tblr-warning);
+}
+.status-dot.ok {
+  background-color: var(--tblr-success);
+}
+.status-dot.error {
+  background-color: var(--tblr-danger);
+}
+
+.fan-tile {
+  min-width: 130px;
+}
+.fan-tile .fan-rpm {
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.fan-tile .fan-mode-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+}
+.fan-tile.card-auto {
+  border-color: var(--tblr-primary);
+}
+.fan-tile.card-manual {
+  border-color: var(--tblr-secondary);
+}
+
+.temp-tile {
+  min-width: 100px;
+  cursor: default;
+}
+.temp-tile .temp-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.temp-tile.cold {
+  background: rgba(var(--tblr-info-rgb), 0.1);
+}
+.temp-tile.warm {
+  background: rgba(var(--tblr-warning-rgb), 0.15);
+}
+.temp-tile.hot {
+  background: rgba(var(--tblr-danger-rgb), 0.2);
+}
+.temp-tile .temp-source {
+  font-size: 0.7rem;
+  color: var(--tblr-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 350px;
+}
+
+#curve-chart {
+  cursor: crosshair;
+}
+
+/* curve points table */
+.point-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  background: var(--tblr-bg-surface);
+  border-radius: 4px;
+}
+.point-row span {
+  flex: 1;
+  font-size: 0.85rem;
+}
+.point-row .btn {
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+}

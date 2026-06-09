@@ -1,0 +1,34 @@
+server:
+  hostname: localhost
+  port: 3211
+
+hardware:
+  port: COM3 # Or /dev/ttyUSB0 on Linux
+  debug_uart: false
+
+automation:
+  enabled: true
+  poll_interval: 10
+
+paths:
+  disks_ini: config/disks.ini
+
+smartctl_devices:
+  - "/dev/nvme0n1"
+  - "/dev/sda"
+
+fan_profiles:
+  DefaultProfile:
+    CurveType: "linear"
+    TempSource: ["disk1", "disk2"]
+    UsePWM: true
+    Points:
+      30: 20
+      45: 50
+      60: 100
+
+fan_controls:
+  "0":
+    AssignedProfile: "DefaultProfile"
+  "1":
+    AssignedProfile: "DefaultProfile"
