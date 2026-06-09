@@ -9,7 +9,11 @@ services:
       - "3211:3211"
     environment:
       - MOCK_HARDWARE=true
+      - OPENFANCOMPORT=/dev/null
+      - OPENFAN_AUTO_ENABLED=false
+      - OPENFAN_DEBUG_UART=false
+      - OPENFAN_PORT=3211
       - OPENFAN_POLL_INTERVAL=10
       - OPENFAN_RELOAD_PROFILES=true
     volumes:
-      - ./config:/opt/openfanauto/config:ro
+      - ./config:/config:ro

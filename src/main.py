@@ -6,10 +6,14 @@ Usage::
     cd src && python main.py --config ../config/config.yaml
 
 Environment variables:
-    MOCK_HARDWARE=true      use mock serial driver
-    OPENFAN_POLL_INTERVAL   seconds between automation ticks (default 10)
-    OPENFAN_RELOAD_PROFILES true to hot-reload YAML before each tick
-    OPENFAN_CONFIG          path to config.yaml
+    MOCK_HARDWARE=true       use mock serial driver
+    OPENFANCOMPORT           serial port for OpenFAN hardware
+    OPENFAN_AUTO_ENABLED     start with automation on (default false)
+    OPENFAN_DEBUG_UART       enable serial debug logging (default false)
+    OPENFAN_POLL_INTERVAL    seconds between automation ticks (default 10)
+    OPENFAN_RELOAD_PROFILES  true to hot-reload YAML before each tick
+    OPENFAN_PORT             server listen port (default 3211)
+    OPENFAN_CONFIG           path to config.yaml
 """
 
 from __future__ import annotations
@@ -163,7 +167,7 @@ def main() -> None:
 
         backend = MockSerialHardware()
     else:
-        port_cfg = config.get("hardware.port", None) or os.environ.get("OPENFANCOMPORT")
+        port_cfg = os.environ.get("OPENFANCOMPORT") or config.get("hardware.port", None)
         if not port_cfg:
             logger.error("No hardware port configured (set hardware.port in config or OPENFANCOMPORT env)")
             sys.exit(1)
@@ -176,7 +180,10 @@ def main() -> None:
             serialPrefix="",
             serialSuffix="\r\n",
             timeout=0.2,
-            debug_uart=config.get("hardware.debug_uart", False),
+            debug_uart=(
+                os.environ.get("OPENFAN_DEBUG_UART", "false").lower() == "true"
+                or config.get("hardware.debug_uart", False)
+            ),
         )
 
     commander = FanCommander(backend)
@@ -189,12 +196,16 @@ def main() -> None:
 
     # ---- Automation controller -------------------------------------------
     auto_ctrl = AutoController(commander, config, sensors)
-    if config.get("automation.enabled", False):
+    auto_enabled = (
+        os.environ.get("OPENFAN_AUTO_ENABLED", "false").lower() == "true"
+        or config.get("automation.enabled", False)
+    )
+    if auto_enabled:
         auto_ctrl.start()
 
     # ---- Tornado app -----------------------------------------------------
     app = make_app(commander, config, auto_ctrl, args.debug)
-    port = config.get("server.port", 3211)
+    port = int(os.environ.get("OPENFAN_PORT", config.get("server.port", 3211)))
 
     # ---- Periodic automation callback ------------------------------------
     poll_interval = int(os.environ.get("OPENFAN_POLL_INTERVAL", config.get("automation.poll_interval", 10)))

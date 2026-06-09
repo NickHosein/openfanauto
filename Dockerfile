@@ -25,10 +25,14 @@ RUN pip3 install --no-cache-dir -r /opt/openfanauto/requirements.txt
 
 WORKDIR /opt/openfanauto/src
 
+# Default config path (override via OPENFAN_CONFIG env var or mount to /config)
+VOLUME /config
 EXPOSE 3211
 
 ENV MOCK_HARDWARE=false
 ENV OPENFAN_POLL_INTERVAL=10
 ENV OPENFAN_RELOAD_PROFILES=false
+ENV OPENFAN_PORT=3211
+ENV OPENFAN_CONFIG=/config/config.yaml
 
 ENTRYPOINT ["python3", "main.py"]

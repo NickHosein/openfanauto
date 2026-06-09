@@ -4,8 +4,9 @@
 # Prerequisites:
 #   1. mkdir -p /mnt/user/appdata/openfanauto
 #   2. cp config/config.yaml /mnt/user/appdata/openfanauto/
-#   3. cp config/disks.ini /mnt/user/appdata/openfanauto/  (optional sample)
-#   4. Edit /mnt/user/appdata/openfanauto/config.yaml with your settings
+#   3. Set OPENFANCOMPORT to your serial device (e.g. /dev/ttyUSB0)
+#   4. Toggle OPENFAN_AUTO_ENABLED / OPENFAN_DEBUG_UART as desired
+#   5. All other settings are configured through the Web UI
 #
 # Usage:
 #   docker-compose -f docker-compose.prod.yml up -d
@@ -22,17 +23,20 @@ services:
       - "3211:3211"
     environment:
       - MOCK_HARDWARE=false
+      - OPENFANCOMPORT=/dev/ttyUSB0
+      - OPENFAN_AUTO_ENABLED=true
+      - OPENFAN_DEBUG_UART=false
+      - OPENFAN_PORT=3211
       - OPENFAN_POLL_INTERVAL=10
       - OPENFAN_RELOAD_PROFILES=true
-      - OPENFAN_CONFIG=/mnt/user/appdata/openfanauto/config.yaml
     devices:
       # USB passthrough for real OpenFAN hardware — adjust to your device
       - "/dev/ttyUSB0:/dev/ttyUSB0"
     volumes:
+      # Appdata — store config.yaml here
+      - "/mnt/user/appdata/openfanauto:/config:rw"
       # Unraid disk temperatures
       - "/var/local/emhttp/disks.ini:/var/local/emhttp/disks.ini:ro"
-      # Appdata — store config.yaml and disks.ini here
-      - "/mnt/user/appdata/openfanauto:/mnt/user/appdata/openfanauto:rw"
       # smartctl needs access to block devices (read-only)
       - "/dev:/dev:ro"
     privileged: false

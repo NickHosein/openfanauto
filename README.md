@@ -30,21 +30,49 @@ docker compose up -d
 docker compose logs -f
 ```
 
-### Unraid Production
+### Unraid — `docker run`
 
 ```bash
-# 1. Prepare appdata — copy the template config and set your hardware port
+# 1. Prepare appdata directory
 mkdir -p /mnt/user/appdata/openfanauto
 cp config/config.yaml /mnt/user/appdata/openfanauto/
-# Edit ONLY the hardware.port value (e.g. /dev/ttyUSB0).
-# Everything else — profiles, fan assignments, smartctl devices — is configured through the Web UI.
 
-# 2. Build & start
-docker compose -f docker-compose.prod.yml up -d
+# 2. Run (adjust OPENFANCOMPORT to your device)
+docker run -d \
+  --name openfanauto \
+  --restart unless-stopped \
+  -p 3211:3211 \
+  -e MOCK_HARDWARE=false \
+  -e OPENFANCOMPORT=/dev/ttyUSB0 \
+  -e OPENFAN_AUTO_ENABLED=true \
+  -e OPENFAN_DEBUG_UART=false \
+  -e OPENFAN_PORT=3211 \
+  -e OPENFAN_POLL_INTERVAL=10 \
+  -e OPENFAN_RELOAD_PROFILES=true \
+  -v /mnt/user/appdata/openfanauto:/config:rw \
+  -v /var/local/emhttp/disks.ini:/var/local/emhttp/disks.ini:ro \
+  -v /dev:/dev:ro \
+  --device /dev/ttyUSB0:/dev/ttyUSB0 \
+  --cap-add SYS_RAWIO \
+  openfanauto:latest
 
 # 3. Open the Web UI → http://your-unraid-ip:3211
 #    Create profiles, assign fans, and click 'Save' to persist.
 ```
+
+### Unraid — `docker compose`
+
+```bash
+# 1. Prepare appdata
+mkdir -p /mnt/user/appdata/openfanauto
+cp config/config.yaml /mnt/user/appdata/openfanauto/
+
+# 2. Edit docker-compose.prod.yml — set OPENFANCOMPORT, then:
+docker compose -f docker-compose.prod.yml up -d
+```
+
+> **Note:** The default config path inside the container is `/config/config.yaml`.
+> Mount your appdata directory to `/config` and config + profile saves will persist there.
 
 ---
 
@@ -53,10 +81,13 @@ docker compose -f docker-compose.prod.yml up -d
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MOCK_HARDWARE` | `false` | Use mock serial driver (no hardware needed) |
+| `OPENFAN_AUTO_ENABLED` | `false` | Start with automation enabled on boot |
+| `OPENFAN_DEBUG_UART` | `false` | Enable serial debug logging |
+| `OPENFAN_PORT` | `3211` | Server listen port |
 | `OPENFAN_POLL_INTERVAL` | `10` | Seconds between automation ticks |
 | `OPENFAN_RELOAD_PROFILES` | `false` | Hot-reload YAML profiles each cycle |
-| `OPENFAN_CONFIG` | `config/config.yaml` | Path to YAML config file |
-| `OPENFANCOMPORT` | — | Override serial port (fallback if not in config) |
+| `OPENFAN_CONFIG` | `/config/config.yaml` | Path to YAML config file |
+| `OPENFANCOMPORT` | — | Serial port for OpenFAN hardware |
 
 ---
 
