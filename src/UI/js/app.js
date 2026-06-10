@@ -104,7 +104,7 @@ function renderFanTiles() {
     const modeClass = f.mode === "auto" ? "card-auto" : "card-manual";
     const badgeClass = f.mode === "auto" ? "bg-primary" : "bg-secondary";
     return `
-      <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+      <div style="flex:0 0 calc(20% - 0.4rem); min-width:130px">
         <div class="card fan-tile ${modeClass}">
           <div class="card-body text-center p-3">
             <div class="fan-mode-badge badge ${badgeClass} mb-1">${escHtml(f.mode)}</div>
@@ -250,12 +250,17 @@ function buildChart(points, curveType) {
 }
 
 function onChartClick(evt) {
-  const canvasPos = chartInstance.scales;
-  const xVal = Math.round(chartInstance.scales.x.getValueForPixel(evt.x));
-  const yVal = Math.round(chartInstance.scales.y.getValueForPixel(evt.y));
+  const xVal = Math.max(0, Math.round(chartInstance.scales.x.getValueForPixel(evt.x)));
+  const yVal = Math.max(0, Math.round(chartInstance.scales.y.getValueForPixel(evt.y)));
 
-  // Add point
-  state.curvePoints.push({ x: Math.max(0, xVal), y: Math.max(0, yVal) });
+  // Check for existing point at same temperature (±1 °C tolerance)
+  const existing = state.curvePoints.findIndex(p => Math.abs(p.x - xVal) <= 1);
+  if (existing >= 0) {
+    // Update existing point's value instead of duplicating
+    state.curvePoints[existing].y = yVal;
+  } else {
+    state.curvePoints.push({ x: xVal, y: yVal });
+  }
   refreshChart();
   renderPointsTable();
 }
