@@ -85,11 +85,12 @@ function startPolling(ms = 2000) {
 }
 
 // =========================================================================
-// 2.  Fan tiles
+// 2.  Fan tiles — simplified: badge + RPM, no toggle button
 // =========================================================================
 
 function renderFanTiles() {
   const container = document.getElementById("fan-tiles");
+  if (!container) return;
   if (!state.fans.length) {
     container.innerHTML = '<div class="col-12 text-muted">No fan data</div>';
     return;
@@ -102,29 +103,14 @@ function renderFanTiles() {
       <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
         <div class="card fan-tile ${modeClass}">
           <div class="card-body text-center p-3">
-            <div class="fan-mode-badge badge ${badgeClass} mb-1">${f.mode}</div>
-            <div class="text-muted small">${escHtml(f.alias || `Fan #${f.id + 1}`)}</div>
+            <div class="fan-mode-badge badge ${badgeClass} mb-1">${escHtml(f.mode)}</div>
+            <div class="text-muted small">${escHtml(f.alias || `Fan #${f.id+1}`)}</div>
             <div class="fan-rpm">${rpm.toLocaleString()}</div>
             <div class="text-muted small">RPM</div>
-            <div class="mt-2">
-              <button class="btn btn-sm btn-outline-secondary btn-toggle-mode" data-id="${f.id}" data-mode="${f.mode === 'auto' ? 'manual' : 'auto'}">
-                ${f.mode === 'auto' ? '→ Manual' : '→ Auto'}
-              </button>
-            </div>
           </div>
         </div>
       </div>`;
   }).join("");
-
-  // Wire mode toggle buttons
-  container.querySelectorAll(".btn-toggle-mode").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const id = btn.dataset.id;
-      const mode = btn.dataset.mode;
-      await apiCmd(`/api/v0/fan/${id}/mode?mode=${mode}`);
-      setTimeout(poll, 300);
-    });
-  });
 }
 
 // =========================================================================
@@ -165,49 +151,9 @@ function escHtml(s) {
 }
 
 // =========================================================================
-// 4.  Manual fan control
+// 4.  All-fans dropdown
 // =========================================================================
 
-function populateManualSelect() {
-  const sel = document.getElementById("manual-fan-select");
-  sel.innerHTML = state.fans.map(f =>
-    `<option value="${f.id}">${escHtml(f.alias || `Fan #${f.id + 1}`)}</option>`
-  ).join("");
-}
-
-document.getElementById("btn-apply-manual").addEventListener("click", async () => {
-  const idx = document.getElementById("manual-fan-select").value;
-  const pwm = document.getElementById("control-via-pwm").checked;
-  const val = document.getElementById("manual-fan-value").value;
-  const mode = document.getElementById("manual-fan-mode").value;
-
-  if (pwm) {
-    await apiCmd(`/api/v0/fan/${idx}/pwm?value=${val}`);
-  } else {
-    await apiCmd(`/api/v0/fan/${idx}/rpm?value=${val}`);
-  }
-  await apiCmd(`/api/v0/fan/${idx}/mode?mode=${mode}`);
-  setTimeout(poll, 300);
-});
-
-document.getElementById("control-via-pwm").addEventListener("change", function () {
-  const slider = document.getElementById("manual-fan-value");
-  const label = document.getElementById("manual-value-label");
-  if (this.checked) {
-    slider.min = 0; slider.max = 100; slider.value = 50; slider.step = 1;
-    label.textContent = "50%";
-  } else {
-    slider.min = 0; slider.max = 2000; slider.value = 1000; slider.step = 10;
-    label.textContent = "1000 RPM";
-  }
-});
-
-document.getElementById("manual-fan-value").addEventListener("input", function () {
-  const pwm = document.getElementById("control-via-pwm").checked;
-  document.getElementById("manual-value-label").textContent = pwm ? `${this.value}%` : `${this.value} RPM`;
-});
-
-// All fans
 document.getElementById("all-fans-value").addEventListener("input", function () {
   document.getElementById("all-fans-value-label").textContent = `${this.value}%`;
 });
@@ -553,14 +499,20 @@ async function init() {
   // Initial chart
   buildChart([], "threshold");
 
-  // Populate manual select after first poll
-  populateManualSelect();
+  // Repopulate fan select in curve editor when fan data arrives
+  function populateFanSelect() {
+    const sel = document.getElementById("curve-fan-select");
+    if (!sel) return;
+    sel.innerHTML = (state.fans || []).map(f =>
+      `<option value="${f.id}">${escHtml(f.alias || `Fan #${f.id+1}`)}</option>`
+    ).join("");
+  }
+  populateFanSelect();
 
-  // Re-populate select whenever fans update
   const origRender = renderFanTiles;
   renderFanTiles = function () {
     origRender();
-    populateManualSelect();
+    populateFanSelect();
   };
 
   startPolling();
