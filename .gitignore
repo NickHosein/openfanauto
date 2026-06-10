@@ -1,0 +1,26 @@
+# SQLite databases (runtime state, not source code)
+*.db
+*.db-wal
+*.db-shm
+
+# Backup / temp artifacts from YAML era (obsolete)
+*.bak
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

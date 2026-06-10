@@ -473,30 +473,39 @@ const name = document.getElementById("curve-profile-name").value.trim();
     });
     const j = await r.json();
     if (j.status === "ok") {
-      // Assign to selected fans + re-activate any existing fans in fan_controls
+      // Show toast immediately — don't block the user on fan assignments
+      flashMsg(`Profile '${name}' saved.`, "success");
+
+      // Collect selected fans + any existing controls referencing this profile
       const fanSel = document.getElementById("curve-fan-select");
-      const selectedFans = new Set(fanSel ? [...fanSel.selectedOptions].map(o => o.value) : []);
-      // Also include fans from existing controls config
+      const fanIds = fanSel ? [...fanSel.selectedOptions].map(o => o.value) : [];
       for (const [fid, ctrl] of Object.entries(state.controls || {})) {
-        if (ctrl.AssignedProfile === name) selectedFans.add(fid);
+        if (ctrl.AssignedProfile === name && !fanIds.includes(fid)) fanIds.push(fid);
       }
-      for (const fid of selectedFans) {
-        await fetch("/api/v0/controls/assign", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ fan: fid, profile: name }),
-        });
+
+      // Fire all fan assignments in parallel, then refresh the dropdown
+      if (fanIds.length) {
+        Promise.all(fanIds.map(fid =>
+          fetch("/api/v0/controls/assign", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ fan: fid, profile: name }),
+          })
+        )).then(async () => {
+          const pData = await apiGet("/api/v0/profiles/list");
+          state.profiles = pData.profiles || {};
+          state.controls = pData.controls || {};
+          populateProfileSelect();
+          document.getElementById("curve-profile-select").value = name;
+        }).catch(e => console.warn("Background fan assignment failed:", e));
+      } else {
+        // No fans to assign — just refresh the dropdown
+        const pData = await apiGet("/api/v0/profiles/list");
+        state.profiles = pData.profiles || {};
+        state.controls = pData.controls || {};
+        populateProfileSelect();
+        document.getElementById("curve-profile-select").value = name;
       }
-      // Persist to disk immediately
-      await apiCmd("/api/v0/config/save");
-      // Refresh profiles list
-      const pData = await apiGet("/api/v0/profiles/list");
-      state.profiles = pData.profiles || {};
-      state.controls = pData.controls || {};
-      populateProfileSelect();
-      document.getElementById("curve-profile-select").value = name;
-      const fanMsg = selectedFans.length ? ` assigned to ${selectedFans.length} fan(s)` : "";
-      flashMsg(`Profile '${name}' saved${fanMsg} and written to disk.`, "success");
     } else {
       flashMsg("Error: " + j.message, "danger");
     }
