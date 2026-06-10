@@ -73,6 +73,11 @@
   cursor: crosshair;
 }
 
+/* fix dark-theme form-switch label visibility */
+.form-check-label {
+  color: inherit;
+}
+
 /* curve points table */
 .point-row {
   display: flex;

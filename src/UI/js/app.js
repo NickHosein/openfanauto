@@ -67,6 +67,7 @@ async function poll() {
 
   renderFanTiles();
   renderTempTiles();
+  populateTempSourceSelect();
 }
 
 function updateStatus(which) {
@@ -149,6 +150,16 @@ function renderTempTiles() {
   }).join("");
 }
 
+function populateTempSourceSelect() {
+  const sel = document.getElementById("curve-temp-source");
+  if (!sel) return;
+  const keys = Object.keys(state.temps);
+  if (!keys.length) { sel.innerHTML = '<option value="" disabled>No sensors loaded</option>'; return; }
+  const current = new Set([...sel.selectedOptions].map(o => o.value));
+  sel.innerHTML = keys.map(k => `<option value="${escHtml(k)}">${escHtml(k)}</option>`).join("");
+  [...sel.options].forEach(o => { if (current.has(o.value)) o.selected = true; });
+}
+
 function escHtml(s) {
   const d = document.createElement("div");
   d.textContent = s;
@@ -170,21 +181,8 @@ document.getElementById("btn-all-fans-pwm").addEventListener("click", async () =
 });
 
 // =========================================================================
-// 5.  Automation toggle
+// 5.  All-fans dropdown  (no more automation toggle — removed)
 // =========================================================================
-
-document.getElementById("btn-automation-toggle").addEventListener("click", async () => {
-  const action = state.automation ? "stop" : "start";
-  await apiCmd(`/api/v0/automation?action=${action}`);
-  state.automation = !state.automation;
-  updateAutoBtn();
-});
-
-function updateAutoBtn() {
-  const btn = document.getElementById("btn-automation-toggle");
-  btn.className = `btn btn-sm me-2 ${state.automation ? "btn-primary" : "btn-outline-primary"}`;
-  btn.textContent = state.automation ? "Auto ON" : "Auto OFF";
-}
 
 // =========================================================================
 // 6.  Fan Curve Editor (Chart.js)
@@ -306,16 +304,20 @@ async function loadProfile(name) {
   if (!name || !state.profiles[name]) {
     state.curvePoints = [];
     document.getElementById("curve-type-select").value = "threshold";
-    document.getElementById("curve-temp-source").value = "";
     document.getElementById("curve-use-pwm").checked = false;
+    const ts = document.getElementById("curve-temp-source");
+    if (ts) { for (const o of ts.options) o.selected = false; }
     refreshChart();
     renderPointsTable();
     return;
   }
   const p = state.profiles[name];
+  document.getElementById("curve-profile-name").value = name;
   document.getElementById("curve-type-select").value = p.CurveType || "threshold";
-  document.getElementById("curve-temp-source").value = (p.TempSource || []).join(", ");
   document.getElementById("curve-use-pwm").checked = !!p.UsePWM;
+  const sources = p.TempSource || [];
+  const ts = document.getElementById("curve-temp-source");
+  if (ts) { for (const o of ts.options) o.selected = sources.includes(o.value); }
 
   const pts = p.Points || {};
   state.curvePoints = Object.entries(pts).map(([k, v]) => ({ x: parseFloat(k), y: parseInt(v) }));
@@ -326,7 +328,8 @@ async function loadProfile(name) {
 // Populate profile dropdown
 function populateProfileSelect() {
   const sel = document.getElementById("curve-profile-select");
-  sel.innerHTML = '<option value="">— New Profile —</option>';
+  if (!sel) return;
+  sel.innerHTML = '<option value="">New Profile</option>';
   Object.keys(state.profiles).forEach(name => {
     sel.innerHTML += `<option value="${escHtml(name)}">${escHtml(name)}</option>`;
   });
@@ -342,14 +345,14 @@ document.getElementById("curve-use-pwm").addEventListener("change", refreshChart
 
 // Save profile
 document.getElementById("btn-save-curve").addEventListener("click", async () => {
-  const name = document.getElementById("curve-profile-select").value || prompt("Profile name:");
+const name = document.getElementById("curve-profile-name").value.trim();
   if (!name) return;
 
   const points = {};
   state.curvePoints.forEach(p => { points[p.x] = p.y; });
 
-  const tempSource = document.getElementById("curve-temp-source").value
-    .split(",").map(s => s.trim()).filter(Boolean);
+  const ts = document.getElementById("curve-temp-source");
+  const tempSource = ts ? [...ts.selectedOptions].map(o => o.value) : [];
 
   const payload = new URLSearchParams({
     name: name,
@@ -387,8 +390,8 @@ document.getElementById("btn-save-curve").addEventListener("click", async () => 
 
 // Delete profile
 document.getElementById("btn-delete-curve").addEventListener("click", async () => {
-  const name = document.getElementById("curve-profile-select").value;
-  if (!name) return alert("Select a profile first.");
+  const name = document.getElementById("curve-profile-name").value.trim();
+  if (!name) { flashMsg("Enter or load a profile name first", "danger"); return; }
   if (!confirm(`Delete profile '${name}'?`)) return;
   await apiCmd(`/api/v0/profiles/remove?name=${encodeURIComponent(name)}`);
   const pData = await apiGet("/api/v0/profiles/list");
@@ -494,15 +497,10 @@ async function init() {
     console.warn("Could not load profiles:", e);
   }
 
-  // Load automation state
-  try {
-    const aData = await apiGet("/api/v0/automation?action=status");
-    state.automation = aData.automation === "running";
-  } catch (e) { /* ignore */ }
-  updateAutoBtn();
 
   // Initial chart
   buildChart([], "threshold");
+  populateTempSourceSelect();
 
   // Repopulate fan select in curve editor when fan data arrives
   function populateFanSelect() {
