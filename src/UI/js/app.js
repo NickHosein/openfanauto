@@ -378,6 +378,8 @@ async function loadProfile(name) {
     document.getElementById("curve-use-pwm").checked = true;
     const ts = document.getElementById("curve-temp-source");
     if (ts) { for (const o of ts.options) o.selected = false; }
+    const fs = document.getElementById("curve-fan-select");
+    if (fs) { for (const o of fs.options) o.selected = false; }
     refreshChart();
     renderPointsTable();
     return;
@@ -513,6 +515,8 @@ document.getElementById("btn-delete-curve").addEventListener("click", async () =
   state.profiles = pData.profiles || {};
   state.controls = pData.controls || {};
   populateProfileSelect();
+  document.getElementById("curve-profile-select").value = "";
+  document.getElementById("curve-profile-name").value = "";
   loadProfile("");
 });
 
