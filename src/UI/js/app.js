@@ -308,7 +308,9 @@ function buildChart(points, curveType) {
 
 function onChartClick(evt) {
   const xVal = Math.max(0, Math.round(chartInstance.scales.x.getValueForPixel(evt.x)));
-  const yVal = Math.max(0, Math.round(chartInstance.scales.y.getValueForPixel(evt.y)));
+  const usePWM = document.getElementById("curve-use-pwm").checked;
+  const yMax = usePWM ? 100 : 5500;
+  const yVal = Math.max(0, Math.min(yMax, Math.round(chartInstance.scales.y.getValueForPixel(evt.y))));
 
   // Check for existing point at same temperature (±1 °C tolerance)
   const existing = state.curvePoints.findIndex(p => Math.abs(p.x - xVal) <= 1);
@@ -524,14 +526,20 @@ document.getElementById("btn-delete-curve").addEventListener("click", async () =
   if (!name) { flashMsg("Enter or load a profile name first", "danger"); return; }
   if (!confirm(`Delete profile '${name}'?`)) return;
   flashMsg(`Profile '${name}' deleted.`, "info");
-  await apiCmd(`/api/v0/profiles/remove?name=${encodeURIComponent(name)}`);
-  const pData = await apiGet("/api/v0/profiles/list");
-  state.profiles = pData.profiles || {};
-  state.controls = pData.controls || {};
+
+  // Optimistically update local state — instant UI feedback
+  delete state.profiles[name];
+  for (const ctrl of Object.values(state.controls)) {
+    if (ctrl.AssignedProfile === name) ctrl.AssignedProfile = "";
+  }
   populateProfileSelect();
   document.getElementById("curve-profile-select").value = "";
   document.getElementById("curve-profile-name").value = "";
   loadProfile("");
+
+  // Fire delete API in background (persistence only — UI is already updated)
+  apiCmd(`/api/v0/profiles/remove?name=${encodeURIComponent(name)}`)
+    .catch(e => console.warn("Background profile delete failed:", e));
 });
 
 // =========================================================================

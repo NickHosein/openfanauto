@@ -235,13 +235,20 @@ class ProfileRemoveHandler(BaseHandler):
             return self.write_fail("Profile name required")
         if not self.config.get(f"fan_profiles.{name}"):
             return self.write_fail(f"Profile '{name}' not found")
-        # Remove the profile from fan_controls too
+        # Remove the profile from fan_controls and switch affected fans to manual
         controls = self.config.get("fan_controls", {})
+        fans_switched = 0
         for fan_id_str, ctrl in list(controls.items()):
             if ctrl.get("AssignedProfile") == name:
                 self.config.set(f"fan_controls.{fan_id_str}.AssignedProfile", "")
+                try:
+                    self.commander.set_fan_mode(int(fan_id_str), "manual")
+                    fans_switched += 1
+                except (ValueError, TypeError):
+                    pass
         self.config.delete(f"fan_profiles.{name}")
-        self.write_ok(f"Profile '{name}' removed.  Click 'Save' to persist.")
+        detail = f" ({fans_switched} fan(s) switched to manual)" if fans_switched else ""
+        self.write_ok(f"Profile '{name}' removed{detail}.")
 
 
 class ControlAssignHandler(BaseHandler):
