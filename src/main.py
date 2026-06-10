@@ -1,19 +1,18 @@
 """OpenFanAuto — single-Python-process fan controller + temperature automation + Web UI.
-
+ 
 Usage::
-
+ 
     cd src && python main.py --mock
     cd src && python main.py --config ../config/config.yaml
-
+ 
 Environment variables:
     MOCK_HARDWARE=true       use mock serial driver
     OPENFANCOMPORT           serial port for OpenFAN hardware
     OPENFAN_AUTO_ENABLED     start with automation on (default false)
     OPENFAN_DEBUG_UART       enable serial debug logging (default false)
     OPENFAN_POLL_INTERVAL    seconds between automation ticks (default 10)
-    OPENFAN_RELOAD_PROFILES  true to hot-reload YAML before each tick
     OPENFAN_PORT             server listen port (default 3211)
-    OPENFAN_CONFIG           path to config.yaml
+    OPENFAN_CONFIG           path to config (YAML auto-migrated to .db)
 """
 
 from __future__ import annotations
@@ -222,10 +221,10 @@ def main() -> None:
     # ---- Periodic automation callback ------------------------------------
     poll_interval = int(os.environ.get("OPENFAN_POLL_INTERVAL", config.get("automation.poll_interval", 10)))
     live_reload = os.environ.get("OPENFAN_RELOAD_PROFILES", "false").lower() in ("true", "1", "yes")
+    if live_reload:
+        logger.warning("OPENFAN_RELOAD_PROFILES is deprecated — SQLite-backed config is always live; ignoring")
 
     def automation_tick() -> None:
-        if live_reload:
-            config.reload()
         auto_ctrl.tick()
 
     loop = tornado.ioloop.IOLoop.current()
