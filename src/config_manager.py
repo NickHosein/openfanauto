@@ -12,6 +12,29 @@ import yaml
 from base_logger import logger
 
 
+# Default config written when no file exists
+_DEFAULT_CONFIG = {
+    "server": {
+        "hostname": "localhost",
+        "port": 3211,
+    },
+    "hardware": {
+        "port": None,
+        "debug_uart": False,
+    },
+    "automation": {
+        "enabled": False,
+        "poll_interval": 10,
+    },
+    "paths": {
+        "disks_ini": "/var/local/emhttp/disks.ini",
+    },
+    "smartctl_devices": [],
+    "fan_profiles": {},
+    "fan_controls": {},
+}
+
+
 class ConfigManager:
     """Loads config from a YAML file and provides dot-notation access.
 
@@ -33,11 +56,12 @@ class ConfigManager:
     # ------------------------------------------------------------------
 
     def load(self) -> bool:
-        """(Re)load configuration from disk. Returns *True* on success."""
+        """(Re)load configuration from disk.  Creates default if missing."""
         if not os.path.exists(self._path):
-            logger.warning("Config file %s not found — using empty defaults", self._path)
-            self._data = {}
-            return False
+            logger.warning("Config file %s not found — creating default", self._path)
+            self._data = deepcopy(_DEFAULT_CONFIG)
+            self.save()
+            return True
 
         try:
             with open(self._path, "r", encoding="utf-8") as fh:
@@ -123,9 +147,19 @@ class ConfigManager:
 
         Writes to a temp file then renames (atomic on Linux).
         Creates a ``.bak`` backup of the previous file on success.
+        If the parent directory does not exist, it is created.
         """
         tmp_path = self._path + ".tmp"
         bak_path = self._path + ".bak"
+
+        # Ensure parent directory exists
+        parent = os.path.dirname(self._path)
+        if parent and not os.path.isdir(parent):
+            try:
+                os.makedirs(parent, exist_ok=True)
+            except OSError:
+                logger.exception("Cannot create config directory %s", parent)
+                return False
 
         with self._lock:
             try:
