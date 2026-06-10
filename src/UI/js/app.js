@@ -382,6 +382,14 @@ async function loadProfile(name) {
   const sources = p.TempSource || [];
   const ts = document.getElementById("curve-temp-source");
   if (ts) { for (const o of ts.options) o.selected = sources.includes(o.value); }
+  // Select fans assigned to this profile
+  const fs = document.getElementById("curve-fan-select");
+  if (fs) {
+    for (const o of fs.options) {
+      const ctrl = (state.controls || {})[o.value] || {};
+      o.selected = ctrl.AssignedProfile === name;
+    }
+  }
 
   const pts = p.Points || {};
   state.curvePoints = Object.entries(pts).map(([k, v]) => ({ x: parseFloat(k), y: parseInt(v) }));
@@ -505,18 +513,18 @@ document.getElementById("btn-delete-curve").addEventListener("click", async () =
 // 7.  Save-to-disk, flash messages, assign-to-fan
 // =========================================================================
 
-/** Show a non-blocking flash message toast at the top of the page. */
+/** Show a flash toast in the bottom-right corner that auto-fades after 5s. */
 function flashMsg(message, type) {
-  const container = document.querySelector(".page-body .container-xl");
-  if (!container) return;
-  const alert = document.createElement("div");
-  alert.className = `alert alert-${type || "success"} alert-dismissible fade show`;
-  alert.role = "alert";
-  alert.style.marginBottom = "1rem";
-  alert.innerHTML = `${message} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-  container.insertBefore(alert, container.firstChild);
+  const toast = document.createElement("div");
+  toast.className = `flash-toast alert alert-${type || "success"} d-flex align-items-center`;
+  toast.style.cssText = "position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;min-width:280px;max-width:420px;opacity:0;transition:opacity 0.3s ease";
+  toast.innerHTML = `<span class="flex-fill small">${message}</span><button type="button" class="btn-close ms-2" onclick="this.parentElement.remove()"></button>`;
+  document.body.appendChild(toast);
+  // Trigger fade-in
+  requestAnimationFrame(() => { toast.style.opacity = "1"; });
   setTimeout(() => {
-    if (alert.parentNode) alert.parentNode.removeChild(alert);
+    toast.style.opacity = "0";
+    setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
   }, 5000);
 }
 

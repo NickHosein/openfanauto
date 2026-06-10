@@ -189,6 +189,18 @@ def main() -> None:
     commander = FanCommander(backend)
     commander.open()
 
+    # ---- Restore fan modes from config on startup -------------------------
+    fan_controls = config.get("fan_controls", {})
+    for fan_id_str, ctrl in fan_controls.items():
+        if ctrl.get("AssignedProfile"):
+            try:
+                idx = int(fan_id_str)
+                if 0 <= idx <= 9:
+                    commander.set_fan_mode(idx, "auto")
+            except (ValueError, TypeError):
+                pass
+    logger.info("Restored fan modes from config")
+
     # ---- Sensor reader ---------------------------------------------------
     disks_ini = config.get("paths.disks_ini", "config/disks.ini")
     smartctl_devices = config.get("smartctl_devices", [])
