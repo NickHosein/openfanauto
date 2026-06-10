@@ -170,18 +170,97 @@ function escHtml(s) {
 // 4.  All-fans dropdown
 // =========================================================================
 
-document.getElementById("all-fans-value").addEventListener("input", function () {
-  document.getElementById("all-fans-value-label").textContent = `${this.value}%`;
+// All-fans mode toggle changes slider range
+document.getElementById("all-fans-mode-select").addEventListener("change", function () {
+  const slider = document.getElementById("all-fans-value");
+  const label = document.getElementById("all-fans-value-label");
+  if (this.value === "pwm") {
+    slider.min = 0; slider.max = 100; slider.value = 50; slider.step = 1;
+    label.textContent = "50%";
+  } else {
+    slider.min = 0; slider.max = 5500; slider.value = 1000; slider.step = 50;
+    label.textContent = "1000 RPM";
+  }
 });
 
-document.getElementById("btn-all-fans-pwm").addEventListener("click", async () => {
+document.getElementById("all-fans-value").addEventListener("input", function () {
+  const mode = document.getElementById("all-fans-mode-select").value;
+  document.getElementById("all-fans-value-label").textContent =
+    mode === "pwm" ? `${this.value}%` : `${this.value} RPM`;
+});
+
+document.getElementById("btn-all-fans-apply").addEventListener("click", async () => {
+  const mode = document.getElementById("all-fans-mode-select").value;
   const val = document.getElementById("all-fans-value").value;
-  await apiCmd(`/api/v0/fan/all/set?value=${val}`);
+  if (mode === "pwm") {
+    await apiCmd(`/api/v0/fan/all/set?value=${val}`);
+  } else {
+    // No "all fans RPM" endpoint — set each individually
+    for (let i = 0; i < 10; i++) {
+      await apiCmd(`/api/v0/fan/${i}/rpm?value=${val}`);
+    }
+  }
+  // Switch all fans to manual mode (profile assignments stay intact)
+  for (let i = 0; i < 10; i++) {
+    await apiCmd(`/api/v0/fan/${i}/mode?mode=manual`);
+  }
+  const unit = mode === "pwm" ? "%" : " RPM";
+  flashMsg(`All fans set to ${val}${unit} (manual).`, "success");
   setTimeout(poll, 300);
 });
 
 // =========================================================================
-// 5.  All-fans dropdown  (no more automation toggle — removed)
+// 5.  Manual fan control
+// =========================================================================
+
+// Mode toggle changes slider range
+document.getElementById("manual-mode-select").addEventListener("change", function () {
+  const slider = document.getElementById("manual-fan-value");
+  const label = document.getElementById("manual-value-label");
+  if (this.value === "pwm") {
+    slider.min = 0; slider.max = 100; slider.value = 50; slider.step = 1;
+    label.textContent = "50%";
+  } else {
+    slider.min = 0; slider.max = 5500; slider.value = 1000; slider.step = 50;
+    label.textContent = "1000 RPM";
+  }
+});
+
+document.getElementById("manual-fan-value").addEventListener("input", function () {
+  const mode = document.getElementById("manual-mode-select").value;
+  document.getElementById("manual-value-label").textContent =
+    mode === "pwm" ? `${this.value}%` : `${this.value} RPM`;
+});
+
+// Apply manual speed: set fan → clear profile assignment → set mode to manual
+document.getElementById("btn-apply-manual").addEventListener("click", async () => {
+  const idx = document.getElementById("manual-fan-select").value;
+  const mode = document.getElementById("manual-mode-select").value;
+  const val = document.getElementById("manual-fan-value").value;
+  try {
+    if (mode === "pwm") {
+      await apiCmd(`/api/v0/fan/${idx}/pwm?value=${val}`);
+    } else {
+      await apiCmd(`/api/v0/fan/${idx}/rpm?value=${val}`);
+    }
+    // Switch to manual mode (profile assignment stays intact)
+    await apiCmd(`/api/v0/fan/${idx}/mode?mode=manual`);
+    flashMsg("Manual speed applied.", "success");
+    setTimeout(poll, 300);
+  } catch (e) { flashMsg("Manual apply failed: " + e, "danger"); }
+});
+
+// Populate the manual fan dropdown
+function populateManualSelect() {
+  const sel = document.getElementById("manual-fan-select");
+  if (!sel) return;
+  sel.innerHTML = (state.fans || []).map(f =>
+    `<option value="${f.id}">${escHtml(f.alias || `Fan #${f.id+1}`)}</option>`
+  ).join("");
+}
+
+// =========================================================================
+// 6.  All-fans dropdown  (no more automation toggle — removed)
 // =========================================================================
 
 // =========================================================================
@@ -321,7 +400,7 @@ function renderPointsTable() {
 async function loadProfile(name) {
   if (!name || !state.profiles[name]) {
     state.curvePoints = [];
-    document.getElementById("curve-type-select").value = "threshold";
+    document.getElementById("curve-type-select").value = "linear";
     document.getElementById("curve-use-pwm").checked = true;
     const ts = document.getElementById("curve-temp-source");
     if (ts) { for (const o of ts.options) o.selected = false; }
@@ -331,7 +410,7 @@ async function loadProfile(name) {
   }
   const p = state.profiles[name];
   document.getElementById("curve-profile-name").value = name;
-  document.getElementById("curve-type-select").value = p.CurveType || "threshold";
+    document.getElementById("curve-type-select").value = p.CurveType || "linear";
   document.getElementById("curve-use-pwm").checked = !!p.UsePWM;
   const sources = p.TempSource || [];
   const ts = document.getElementById("curve-temp-source");
@@ -389,9 +468,13 @@ const name = document.getElementById("curve-profile-name").value.trim();
     });
     const j = await r.json();
     if (j.status === "ok") {
-      // Assign to all selected fans
+      // Assign to selected fans + re-activate any existing fans in fan_controls
       const fanSel = document.getElementById("curve-fan-select");
-      const selectedFans = fanSel ? [...fanSel.selectedOptions].map(o => o.value) : [];
+      const selectedFans = new Set(fanSel ? [...fanSel.selectedOptions].map(o => o.value) : []);
+      // Also include fans from existing controls config
+      for (const [fid, ctrl] of Object.entries(state.controls || {})) {
+        if (ctrl.AssignedProfile === name) selectedFans.add(fid);
+      }
       for (const fid of selectedFans) {
         await fetch("/api/v0/controls/assign", {
           method: "POST",
@@ -515,14 +598,16 @@ async function init() {
 
 
   // Initial chart
-  buildChart([], "threshold");
+  buildChart([], "linear");
   populateTempSourceSelect();
+  populateManualSelect();
 
   // Repopulate fan select in curve editor when fan data arrives
   // Annotates each option with its current profile assignment
   function populateFanSelect() {
     const sel = document.getElementById("curve-fan-select");
     if (!sel) return;
+    const current = new Set([...sel.selectedOptions].map(o => o.value));
     sel.innerHTML = (state.fans || []).map(f => {
       const ctrl = (state.controls || {})[String(f.id)] || {};
       const profile = ctrl.AssignedProfile || "";
@@ -531,6 +616,7 @@ async function init() {
         : `${escHtml(f.alias || `Fan #${f.id+1}`)} — manual`;
       return `<option value="${f.id}">${label}</option>`;
     }).join("");
+    [...sel.options].forEach(o => { if (current.has(o.value)) { o.selected = true; } });
   }
   populateFanSelect();
 

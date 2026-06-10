@@ -33,10 +33,15 @@
             <button class="btn btn-md btn-primary dropdown-toggle" data-bs-toggle="dropdown">
               Set All Fans
             </button>
-            <div class="dropdown-menu dropdown-menu-end p-3" style="min-width:220px">
-              <label class="form-label small">Set all fans to: <strong id="all-fans-value-label">50%</strong></label>
+            <div class="dropdown-menu dropdown-menu-end p-3" style="min-width:260px">
+              <label class="form-label small mb-1">Mode</label>
+              <select class="form-select form-select-sm mb-2" id="all-fans-mode-select">
+                <option value="pwm">PWM %</option>
+                <option value="rpm">RPM</option>
+              </select>
+              <label class="form-label small">Value: <strong id="all-fans-value-label">50%</strong></label>
               <input type="range" class="form-range mb-2" id="all-fans-value" min="0" max="100" value="50" step="1">
-              <button class="btn btn-sm btn-primary w-100" id="btn-all-fans-pwm">Apply</button>
+              <button class="btn btn-sm btn-primary w-100" id="btn-all-fans-apply">Apply</button>
             </div>
           </div>
         </div>
@@ -62,6 +67,39 @@
                 <div class="card-body">
                   <div id="temp-msg" class="mb-2"></div>
                   <div class="row g-3" id="temp-tiles"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Manual Fan Control -->
+          <div class="row mb-3">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">Manual Fan Control</h3>
+                </div>
+                <div class="card-body">
+                  <div class="row g-3">
+                    <div class="col-md-3">
+                      <label class="form-label">Fan</label>
+                      <select class="form-select" id="manual-fan-select"></select>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label">Mode</label>
+                      <select class="form-select" id="manual-mode-select">
+                        <option value="pwm">PWM %</option>
+                        <option value="rpm">RPM</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label">Value: <strong id="manual-value-label">50%</strong></label>
+                      <input type="range" class="form-range" id="manual-fan-value" min="0" max="100" value="50" step="1">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                      <button class="btn btn-primary w-100" id="btn-apply-manual">Apply</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -104,8 +142,8 @@
                       <div class="mb-3">
                         <label class="form-label">Curve Type</label>
                         <select class="form-select" id="curve-type-select">
-                          <option value="threshold">Threshold</option>
                           <option value="linear">Linear</option>
+                          <option value="threshold">Threshold</option>
                         </select>
                       </div>
                       <div class="mb-3">
