@@ -308,9 +308,12 @@ class ConfigReloadHandler(BaseHandler):
 
 class SensorsHandler(BaseHandler):
     def get(self) -> None:
-        if self.auto_controller is None:
-            return self.write_fail("Automation controller not available")
-        temps = self.auto_controller._sensors.read_all_temperatures()  # noqa: SLF001
+        temps = {}
+        if self.auto_controller is not None:
+            try:
+                temps = self.auto_controller._sensors.read_all_temperatures()  # noqa: SLF001
+            except Exception:
+                logger.exception("Sensor read failed")
         self.write_ok(data={"temperatures": temps})
 
 

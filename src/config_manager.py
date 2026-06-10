@@ -67,7 +67,7 @@ class ConfigManager:
             with open(self._path, "r", encoding="utf-8") as fh:
                 loaded = yaml.safe_load(fh) or {}
             self._data = loaded
-            logger.info("Loaded configuration from %s", self._path)
+            logger.debug("Loaded configuration from %s", self._path)
             return True
         except Exception:
             logger.exception("Error loading config from %s", self._path)

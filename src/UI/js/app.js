@@ -40,21 +40,28 @@ async function apiCmd(path) {
 // =========================================================================
 
 async function poll() {
+  // Fan status (critical for UI)
   try {
-    const [fanData, sensorData] = await Promise.all([
-      apiGet("/api/v0/fan/status"),
-      apiGet("/api/v0/sensors"),
-    ]);
+    const fanData = await apiGet("/api/v0/fan/status");
     state.fans = (fanData.fans || []).map(f => ({
       ...f,
       rpm: (fanData.rpm || {})[f.id] || 0,
     }));
-    state.temps = (sensorData && sensorData.temperatures) || {};
     updateStatus("ok");
   } catch (e) {
     updateStatus("error");
-    console.error("Poll error:", e);
+    console.error("Fan poll error:", e);
   }
+
+  // Sensors (best-effort — don't break fans if this fails)
+  try {
+    const sensorData = await apiGet("/api/v0/sensors");
+    state.temps = (sensorData && sensorData.temperatures) || {};
+  } catch (e) {
+    state.temps = {};
+    console.warn("Sensor poll failed:", e);
+  }
+
   renderFanTiles();
   renderTempTiles();
 }
