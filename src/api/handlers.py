@@ -309,12 +309,17 @@ class ConfigReloadHandler(BaseHandler):
 class SensorsHandler(BaseHandler):
     def get(self) -> None:
         temps = {}
+        disk_ids = {}
         if self.auto_controller is not None:
             try:
                 temps = self.auto_controller._sensors.read_all_temperatures()  # noqa: SLF001
             except Exception:
                 logger.exception("Sensor read failed")
-        self.write_ok(data={"temperatures": temps})
+            # Also expose disk serial suffixes for the UI
+            parser = getattr(self.auto_controller._sensors, "_disks_parser", None)  # noqa: SLF001
+            if parser and hasattr(parser, "disk_ids"):
+                disk_ids = parser.disk_ids
+        self.write_ok(data={"temperatures": temps, "disk_ids": disk_ids})
 
 
 # ---------------------------------------------------------------------------

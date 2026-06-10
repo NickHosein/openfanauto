@@ -146,7 +146,7 @@ class SerialHardware(object):
                 if line.startswith('<'):
                     break
             if time.time() > timeout_timestmap:
-                logger.error(f"Timeout occured ({time.time()} > {timeout_timestmap})")
+                logger.debug("Serial read timeout (device may be busy or fans not connected)")
                 break
 
         return rx_lines

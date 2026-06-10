@@ -15,6 +15,7 @@ class DisksIniParser:
     def __init__(self, file_path: str) -> None:
         self.file_path = file_path
         self.sensors: dict[str, float] = {}
+        self.disk_ids: dict[str, str] = {}
         self._parse()
 
     def _parse(self) -> None:
@@ -34,6 +35,10 @@ class DisksIniParser:
                 temp = float(raw)
                 name = section.strip('"')
                 self.sensors[name] = temp
+                # Grab last 4 chars of the drive id for identification
+                disk_id = cfg[section].get("id", "").strip('"').strip()
+                if disk_id:
+                    self.disk_ids[name] = disk_id[-4:]
                 count += 1
             except (ValueError, TypeError):
                 continue

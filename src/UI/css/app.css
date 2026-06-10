@@ -56,6 +56,12 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+.temp-tile .temp-id {
+  font-size: 0.6rem;
+  color: var(--tblr-muted);
+  opacity: 0.6;
+  font-family: monospace;
+}
 
 .chart-wrapper {
   position: relative;

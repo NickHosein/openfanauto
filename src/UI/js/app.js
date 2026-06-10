@@ -12,6 +12,7 @@ const API_BASE = ""; // same origin
 let state = {
   fans: [],           // [{id, mode, alias, value, rpm}]
   temps: {},          // {sensor_name: temp_c}
+  diskIds: {},        // {sensor_name: last_4_of_serial}
   profiles: {},       // {name: {CurveType, Points, TempSource, UsePWM}}
   controls: {},       // {fan_id_str: {AssignedProfile}}
   automation: false,
@@ -57,8 +58,10 @@ async function poll() {
   try {
     const sensorData = await apiGet("/api/v0/sensors");
     state.temps = (sensorData && sensorData.temperatures) || {};
+    state.diskIds = (sensorData && sensorData.disk_ids) || {};
   } catch (e) {
     state.temps = {};
+    state.diskIds = {};
     console.warn("Sensor poll failed:", e);
   }
 
@@ -132,11 +135,13 @@ function renderTempTiles() {
     let cls = "cold";
     if (temp > 45) cls = "hot";
     else if (temp > 35) cls = "warm";
+    const idSuffix = (state.diskIds || {})[name] || "";
     return `
       <div class="col-6 col-sm-4 col-md-3 col-lg-2">
         <div class="card temp-tile ${cls}">
           <div class="card-body text-center p-3">
             <div class="temp-source">${escHtml(name)}</div>
+            ${idSuffix ? `<div class="temp-id" title="Serial suffix">${escHtml(idSuffix)}</div>` : ""}
             <div class="temp-value">${temp.toFixed(0)}°C</div>
           </div>
         </div>
