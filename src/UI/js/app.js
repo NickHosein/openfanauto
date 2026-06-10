@@ -103,11 +103,15 @@ function renderFanTiles() {
     const rpm = f.rpm || 0;
     const modeClass = f.mode === "auto" ? "card-auto" : "card-manual";
     const badgeClass = f.mode === "auto" ? "bg-primary" : "bg-secondary";
+    const ctrl = (state.controls || {})[String(f.id)] || {};
+    const badgeText = f.mode === "auto" && ctrl.AssignedProfile
+      ? `auto - ${ctrl.AssignedProfile}`
+      : f.mode;
     return `
       <div style="flex:0 0 calc(20% - 0.4rem); min-width:130px">
         <div class="card fan-tile ${modeClass}">
           <div class="card-body text-center p-3">
-            <div class="fan-mode-badge badge ${badgeClass} mb-1">${escHtml(f.mode)}</div>
+            <div class="fan-mode-badge badge ${badgeClass} mb-1">${escHtml(badgeText)}</div>
             <div class="text-muted small">${escHtml(f.alias || `Fan #${f.id+1}`)}</div>
             <div class="fan-rpm">${rpm.toLocaleString()}</div>
             <div class="text-muted small">RPM</div>
@@ -519,6 +523,7 @@ document.getElementById("btn-delete-curve").addEventListener("click", async () =
   const name = document.getElementById("curve-profile-name").value.trim();
   if (!name) { flashMsg("Enter or load a profile name first", "danger"); return; }
   if (!confirm(`Delete profile '${name}'?`)) return;
+  flashMsg(`Profile '${name}' deleted.`, "info");
   await apiCmd(`/api/v0/profiles/remove?name=${encodeURIComponent(name)}`);
   const pData = await apiGet("/api/v0/profiles/list");
   state.profiles = pData.profiles || {};
