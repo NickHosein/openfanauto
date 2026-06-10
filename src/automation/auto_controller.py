@@ -68,7 +68,8 @@ class AutoController:
                 temp_sources = profile.get("TempSource", [])
                 if isinstance(temp_sources, str):
                     temp_sources = [temp_sources]
-                relevant = [temps[s] for s in temp_sources if s in temps]
+                # Filter out None temps (spun-down drives) and missing keys
+                relevant = [temps[s] for s in temp_sources if s in temps and temps[s] is not None]
                 if not relevant:
                     continue
 

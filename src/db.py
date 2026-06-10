@@ -194,7 +194,8 @@ class Database:
         conn = self._get_conn()
         profiles: dict[str, dict[str, Any]] = {}
 
-        for row in conn.execute("SELECT * FROM fan_profiles"):
+        profiles_rows = conn.execute("SELECT * FROM fan_profiles").fetchall()
+        for row in profiles_rows:
             name = row["name"]
             # Load sources
             sources_rows = conn.execute(

@@ -50,6 +50,14 @@
 .temp-tile.hot {
   background: rgba(var(--tblr-danger-rgb), 0.2);
 }
+.temp-tile.spun-down {
+  background: rgba(var(--tblr-secondary-rgb), 0.08);
+  opacity: 0.6;
+}
+.temp-tile.spun-down .temp-value {
+  color: var(--tblr-muted);
+  font-style: italic;
+}
 .temp-tile .temp-source {
   font-size: 0.85rem;
   color: var(--tblr-muted);

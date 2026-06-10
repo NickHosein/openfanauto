@@ -225,7 +225,7 @@ class ProfileAddHandler(BaseHandler):
                 "Points": {str(k): int(v) for k, v in points.items()},
             },
         )
-        self.write_ok(f"Profile '{profile_name}' saved in memory.  Click 'Save' to persist.")
+        self.write_ok(f"Profile '{profile_name}' saved.")
 
 
 class ProfileRemoveHandler(BaseHandler):

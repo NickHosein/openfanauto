@@ -134,16 +134,23 @@ function renderTempTiles() {
 
   container.innerHTML = entries.map(([name, temp]) => {
     let cls = "cold";
-    if (temp > 45) cls = "hot";
-    else if (temp > 35) cls = "warm";
+    const hasTemp = temp !== null && temp !== undefined;
+    if (hasTemp) {
+      if (temp > 45) cls = "hot";
+      else if (temp > 35) cls = "warm";
+    } else {
+      cls = "spun-down";
+    }
     const idSuffix = (state.diskIds || {})[name] || "";
+    const tempDisplay = hasTemp ? `${temp.toFixed(0)}°C` : "—";
+    const tempTitle = hasTemp ? "" : "spun down";
     return `
       <div class="col-6 col-sm-4 col-md-3 col-lg-2">
         <div class="card temp-tile ${cls}">
           <div class="card-body text-center p-3">
             <div class="temp-source">${escHtml(name)}</div>
             ${idSuffix ? `<div class="temp-id" title="Serial suffix">${escHtml(idSuffix)}</div>` : ""}
-            <div class="temp-value">${temp.toFixed(0)}°C</div>
+            <div class="temp-value" title="${tempTitle}">${tempDisplay}</div>
           </div>
         </div>
       </div>`;
