@@ -241,8 +241,8 @@ function buildChart(points, curveType) {
           type: "linear",
           title: { display: true, text: document.getElementById("curve-use-pwm").checked ? "PWM %" : "RPM" },
           min: 0,
-          max: 100,
-          ticks: { stepSize: 10 },
+          max: document.getElementById("curve-use-pwm").checked ? 100 : 5500,
+          ticks: { stepSize: document.getElementById("curve-use-pwm").checked ? 10 : 500 },
         },
       },
     },
@@ -265,17 +265,30 @@ function onChartClick(evt) {
   renderPointsTable();
 }
 
-// Right-click to delete nearest point
+// Right-click to delete nearest point (manual coordinate matching)
 curveCanvas.addEventListener("contextmenu", (evt) => {
   evt.preventDefault();
-  const points = chartInstance.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
-  if (points.length) {
-    const idx = points[0].index;
-    state.curvePoints.splice(idx, 1);
+  const xVal = Math.round(chartInstance.scales.x.getValueForPixel(evt.offsetX));
+  const existing = state.curvePoints.findIndex(p => Math.abs(p.x - xVal) <= 1);
+  if (existing >= 0) {
+    state.curvePoints.splice(existing, 1);
     refreshChart();
     renderPointsTable();
   }
 });
+
+// Click-to-toggle for multi-select dropdowns (no Ctrl needed)
+function setupClickToggle(sel) {
+  sel.addEventListener("mousedown", function (evt) {
+    const opt = evt.target.closest("option");
+    if (!opt) return;
+    evt.preventDefault();
+    opt.selected = !opt.selected;
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+setupClickToggle(document.getElementById("curve-fan-select"));
+setupClickToggle(document.getElementById("curve-temp-source"));
 
 function refreshChart() {
   buildChart(state.curvePoints, document.getElementById("curve-type-select").value);
@@ -309,7 +322,7 @@ async function loadProfile(name) {
   if (!name || !state.profiles[name]) {
     state.curvePoints = [];
     document.getElementById("curve-type-select").value = "threshold";
-    document.getElementById("curve-use-pwm").checked = false;
+    document.getElementById("curve-use-pwm").checked = true;
     const ts = document.getElementById("curve-temp-source");
     if (ts) { for (const o of ts.options) o.selected = false; }
     refreshChart();
@@ -376,15 +389,26 @@ const name = document.getElementById("curve-profile-name").value.trim();
     });
     const j = await r.json();
     if (j.status === "ok") {
-      flashMsg(`Profile '${name}' saved in memory.`, "success");
+      // Assign to all selected fans
+      const fanSel = document.getElementById("curve-fan-select");
+      const selectedFans = fanSel ? [...fanSel.selectedOptions].map(o => o.value) : [];
+      for (const fid of selectedFans) {
+        await fetch("/api/v0/controls/assign", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ fan: fid, profile: name }),
+        });
+      }
+      // Persist to disk immediately
+      await apiCmd("/api/v0/config/save");
       // Refresh profiles list
       const pData = await apiGet("/api/v0/profiles/list");
       state.profiles = pData.profiles || {};
       state.controls = pData.controls || {};
       populateProfileSelect();
       document.getElementById("curve-profile-select").value = name;
-      // Show assign-to-fan helper
-      showAssignUI(name);
+      const fanMsg = selectedFans.length ? ` assigned to ${selectedFans.length} fan(s)` : "";
+      flashMsg(`Profile '${name}' saved${fanMsg} and written to disk.`, "success");
     } else {
       flashMsg("Error: " + j.message, "danger");
     }
@@ -472,20 +496,7 @@ function showAssignUI(profileName) {
   });
 }
 
-// Save to Disk button
-document.getElementById("btn-save-disk").addEventListener("click", async () => {
-  const btn = document.getElementById("btn-save-disk");
-  btn.disabled = true;
-  btn.textContent = "Saving...";
-  try {
-    const j = await apiCmd("/api/v0/config/save");
-    flashMsg(j.message, j.status === "ok" ? "success" : "danger");
-  } catch (e) {
-    flashMsg("Save failed: " + e, "danger");
-  }
-  btn.disabled = false;
-  btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg> Save`;
-});
+// (Save-to-disk button removed — config writes happen on profile save)
 
 // =========================================================================
 // 8.  Initialisation
@@ -508,12 +519,18 @@ async function init() {
   populateTempSourceSelect();
 
   // Repopulate fan select in curve editor when fan data arrives
+  // Annotates each option with its current profile assignment
   function populateFanSelect() {
     const sel = document.getElementById("curve-fan-select");
     if (!sel) return;
-    sel.innerHTML = (state.fans || []).map(f =>
-      `<option value="${f.id}">${escHtml(f.alias || `Fan #${f.id+1}`)}</option>`
-    ).join("");
+    sel.innerHTML = (state.fans || []).map(f => {
+      const ctrl = (state.controls || {})[String(f.id)] || {};
+      const profile = ctrl.AssignedProfile || "";
+      const label = profile
+        ? `${escHtml(f.alias || `Fan #${f.id+1}`)} → ${escHtml(profile)}`
+        : `${escHtml(f.alias || `Fan #${f.id+1}`)} — manual`;
+      return `<option value="${f.id}">${label}</option>`;
+    }).join("");
   }
   populateFanSelect();
 
