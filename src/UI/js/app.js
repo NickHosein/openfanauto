@@ -21,7 +21,7 @@ let state = {
 };
 
 /** Abort a fetch after *ms* milliseconds. */
-function fetchWithTimeout(url, opts = {}, ms = 5000) {
+function fetchWithTimeout(url, opts = {}, ms = 10000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer));
@@ -90,6 +90,7 @@ function updateStatus(which) {
     txt.classList.add("ok");
     txt.textContent = "Connected";
   } else if (which === "connecting") {
+    txt.classList.add("connecting");
     txt.textContent = "Connecting…";
   } else {
     txt.classList.add("error");
