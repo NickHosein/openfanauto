@@ -181,5 +181,16 @@ class FanCommander:
     def _tx(self, cmd: int, data):
         data_str = self._build_hex_data(data)
         payload = f">{cmd:02X}{data_str}"
+        logger.debug("TX payload: %s", payload)
         lines = self._hw.serial_transaction(payload)
-        return lines[0] if lines else None
+        if not lines:
+            logger.debug("TX response: (empty)")
+            return None
+        # Find the response line that starts with '<' (firmware reply);
+        # the first line is usually the command echo (starts with '>').
+        for line in lines:
+            if line.startswith('<'):
+                logger.debug("TX response: %s", line)
+                return line
+        logger.debug("TX response: no '<' line in %s", lines)
+        return None
