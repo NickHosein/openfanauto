@@ -21,7 +21,7 @@ let state = {
 };
 
 /** Abort a fetch after *ms* milliseconds. */
-function fetchWithTimeout(url, opts = {}, ms = 10000) {
+function fetchWithTimeout(url, opts = {}, ms = 15000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer));
@@ -67,7 +67,11 @@ async function poll() {
     updateStatus("ok");
   } else {
     updateStatus("error");
-    console.error("Fan poll error:", fanResult.reason);
+    if (fanResult.reason?.name === "AbortError") {
+      console.debug("Fan poll timed out");
+    } else {
+      console.error("Fan poll error:", fanResult.reason);
+    }
   }
 
   // Sensors (best-effort — don't break fans if this fails)
@@ -78,7 +82,11 @@ async function poll() {
   } else {
     state.temps = {};
     state.diskIds = {};
-    console.warn("Sensor poll failed:", sensorResult.reason);
+    if (sensorResult.reason?.name === "AbortError") {
+      console.debug("Sensor poll timed out");
+    } else {
+      console.warn("Sensor poll failed:", sensorResult.reason);
+    }
   }
 
   renderFanTiles();
@@ -89,6 +97,10 @@ async function poll() {
 function updateStatus(which) {
   console.debug("[status] →", which);
   const txt = document.getElementById("status-text");
+  if (!txt) {
+    console.warn("[status] #status-text not found — page may need refresh");
+    return;
+  }
   txt.className = "fw-semibold";
   if (which === "ok") {
     txt.classList.add("ok");
