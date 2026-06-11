@@ -231,10 +231,12 @@ document.getElementById("btn-apply-manual").addEventListener("click", async () =
 function populateManualSelect() {
   const sel = document.getElementById("manual-fan-select");
   if (!sel) return;
+  const prev = sel.value;
   sel.innerHTML = '<option value="all">All Fans</option>' +
     (state.fans || []).map(f =>
       `<option value="${f.id}">${escHtml(f.alias || `Fan #${f.id+1}`)}</option>`
     ).join("");
+  if (prev) sel.value = prev;
 }
 
 // =========================================================================
