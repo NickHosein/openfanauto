@@ -84,16 +84,15 @@ async function poll() {
 }
 
 function updateStatus(which) {
-  const dot = document.getElementById("status-dot");
   const txt = document.getElementById("status-text");
-  dot.className = "status-dot me-2";
+  txt.className = "fw-semibold";
   if (which === "ok") {
-    dot.classList.add("ok");
+    txt.classList.add("ok");
     txt.textContent = "Connected";
   } else if (which === "connecting") {
     txt.textContent = "Connecting…";
   } else {
-    dot.classList.add("error");
+    txt.classList.add("error");
     txt.textContent = "Disconnected";
   }
 }
