@@ -318,12 +318,17 @@ class SensorsHandler(BaseHandler):
         temps = {}
         disk_ids = {}
         if self.auto_controller is not None:
+            sensors = self.auto_controller._sensors  # noqa: SLF001
             try:
-                temps = self.auto_controller._sensors.read_all_temperatures()  # noqa: SLF001
+                # Return cached temperatures only — never trigger a blocking
+                # smartctl read from the web handler.  The automation tick
+                # refreshes the cache on its own schedule.
+                if sensors._cached:  # noqa: SLF001
+                    temps = sensors._cached.copy()  # noqa: SLF001
             except Exception:
                 logger.exception("Sensor read failed")
             # Also expose disk serial suffixes for the UI
-            parser = getattr(self.auto_controller._sensors, "_disks_parser", None)  # noqa: SLF001
+            parser = getattr(sensors, "_disks_parser", None)  # noqa: SLF001
             if parser and hasattr(parser, "disk_ids"):
                 disk_ids = parser.disk_ids
         self.write_ok(data={"temperatures": temps, "disk_ids": disk_ids})
