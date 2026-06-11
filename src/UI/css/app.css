@@ -1,20 +1,26 @@
 /* OpenFanAuto — custom styles (Tabler overrides) */
 
+.status-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: middle;
+  background-color: var(--tblr-warning);
+  transition: background-color 0.3s ease;
+}
+.status-dot.ok {
+  background-color: var(--tblr-success);
+  box-shadow: 0 0 8px rgba(var(--tblr-success-rgb), 0.5);
+}
+.status-dot.error {
+  background-color: var(--tblr-danger);
+  box-shadow: 0 0 8px rgba(var(--tblr-danger-rgb), 0.5);
+}
+
 #status-text {
-  font-size: 0.85rem;
-  padding: 0.15rem 0.6rem;
-  border: 1.5px solid var(--tblr-warning);
-  color: var(--tblr-warning);
-  border-radius: 0.375rem;
-  transition: all 0.3s ease;
-}
-#status-text.ok {
-  border-color: var(--tblr-success);
-  color: var(--tblr-success);
-}
-#status-text.error {
-  border-color: var(--tblr-danger);
-  color: var(--tblr-danger);
+  font-size: 0.95rem;
 }
 
 .fan-tile {
