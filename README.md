@@ -88,6 +88,7 @@ docker compose -f docker-compose.prod.yml up -d
 | `OPENFAN_RELOAD_PROFILES` | `false` | Hot-reload YAML profiles each cycle |
 | `OPENFAN_CONFIG` | `/config/config.yaml` | Path to YAML config file |
 | `OPENFANCOMPORT` | — | Serial port for OpenFAN hardware |
+| `OPENFAN_LOG_LEVEL` | `info` | Logging level (`info` or `debug`) |
 
 ---
 
@@ -187,8 +188,23 @@ OpenFanAuto/
 │       ├── css/app.css
 │       └── js/app.js           # All UI logic (vanilla JS, no build step)
 ├── tests/
+│   ├── test_auto_controller.py
+│   ├── test_base_logger.py
+│   ├── test_config_manager.py
+│   ├── test_db.py
+│   ├── test_disks_ini_parser.py
 │   └── test_fan_curves.py
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml          # Local dev (mock hardware)
 └── docker-compose.prod.yml     # Unraid production
+
+---
+
+## Credits
+
+OpenFanAuto merges and builds upon two excellent projects by
+[SasaKaranovic](https://github.com/SasaKaranovic):
+
+- **[OpenFanController](https://github.com/SasaKaranovic/OpenFanController)** — RP2040 firmware, Python backend API, and Web GUI
+- **[OpenFanUnraidService](https://github.com/SasaKaranovic/OpenFanUnraidService)** — Unraid disk temperature monitoring and automatic fan control
