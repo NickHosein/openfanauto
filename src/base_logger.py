@@ -54,16 +54,10 @@ def default_formatter():
     return logging.Formatter(fmt, "%b %d %Y %H:%M:%S")
 
 def set_logger_level(level='info'):
-    if level.lower() == 'info':
-        logging.getLogger('openfanauto').setLevel("INFO")
-        logger.info("Logging level: INFO")
-    elif level.lower() == 'debug':
-        logging.getLogger('openfanauto').setLevel("DEBUG")
-        logger.info("Logging level: DEBUG")
+    if level.lower() == 'debug':
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
-        logger.info("Logging level: INFO")
 
 # Basic logger setup
 log_formatter = logging.Formatter('%(asctime)s %(levelname)s %(funcName)s(%(lineno)d) %(message)s')

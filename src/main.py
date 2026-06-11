@@ -150,7 +150,7 @@ def main() -> None:
     if args.debug:
         set_logger_level("debug")
     else:
-        set_logger_level("info")
+        set_logger_level(os.environ.get("OPENFAN_LOG_LEVEL", "info"))
 
     logger.info("=== OpenFanAuto starting ===")
 
