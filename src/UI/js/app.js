@@ -115,8 +115,13 @@ function updateStatus(which) {
 }
 
 function startPolling(ms = 2000) {
-  poll();
-  setInterval(poll, ms);
+  let running = false;
+  setInterval(async () => {
+    if (running) return;
+    running = true;
+    try { await poll(); } finally { running = false; }
+  }, ms);
+  poll(); // immediate first call
 }
 
 // =========================================================================
