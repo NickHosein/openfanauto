@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 from temperature.disks_ini_parser import DisksIniParser
 from temperature.smartctl_parser import SmartCtlParser
 from base_logger import logger
@@ -13,8 +15,13 @@ class SensorReader:
     *disks.ini* is the primary source (fast, no disk spin-up).
     *smartctl* provides fallback data for drives not in disks.ini (NVMe, unassigned).
 
+    Results are cached for 30 seconds to avoid running expensive ``smartctl``
+    subprocess calls on every 2-second poll cycle.
+
     On conflicts, disks.ini wins.
     """
+
+    _CACHE_TTL = 30  # seconds
 
     def __init__(
         self,
@@ -24,6 +31,8 @@ class SensorReader:
         self._disks_parser: DisksIniParser | None = None
         self._smartctl_parser: SmartCtlParser | None = None
         self._smartctl_devices: list[str] = smartctl_devices or []
+        self._cache_time: float = 0.0
+        self._cached: dict[str, float | None] = {}
 
         if disks_ini_path:
             try:
@@ -35,12 +44,18 @@ class SensorReader:
             self._smartctl_parser = SmartCtlParser()
 
     # ------------------------------------------------------------------
-    def read_all_temperatures(self) -> dict[str, float]:
+    def read_all_temperatures(self) -> dict[str, float | None]:
         """Return ``{sensor_name: temp_c}`` from all available sources.
 
-        disks.ini values take priority over smartctl for the same device.
+        Results are cached for *CACHE_TTL* seconds; calling this method
+        more frequently returns the same value without re-running smartctl
+        or re-reading disks.ini.
         """
-        results: dict[str, float] = {}
+        now = time.time()
+        if self._cache_time and (now - self._cache_time) < self._CACHE_TTL:
+            return self._cached.copy()
+
+        results: dict[str, float | None] = {}
 
         # 1.  disks.ini (fast, primary source)
         if self._disks_parser:
@@ -58,4 +73,6 @@ class SensorReader:
             except Exception:
                 logger.exception("Error reading smartctl")
 
-        return results
+        self._cached = results
+        self._cache_time = now
+        return results.copy()

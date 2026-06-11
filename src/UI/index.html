@@ -25,6 +25,10 @@
           OpenFanAuto
         </h1>
         <div class="navbar-nav flex-row order-md-last">
+          <span class="nav-item d-flex align-items-center gap-2">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text" class="fw-semibold" style="font-size:0.9rem">Connecting…</span>
+          </span>
         </div>
       </div>
     </header>
@@ -32,12 +36,6 @@
     <div class="page-wrapper">
       <div class="page-body">
         <div class="container-xl">
-
-          <!-- Status strip -->
-          <div class="d-flex align-items-center gap-2 mb-3 py-2 px-3 rounded-2" style="background:var(--tblr-bg-surface)">
-            <span class="status-dot" id="status-dot"></span>
-            <span id="status-text" class="fw-semibold">Connecting…</span>
-          </div>
 
           <div class="d-flex flex-wrap mb-3" id="fan-tiles" style="gap:0.5rem"></div>
 
