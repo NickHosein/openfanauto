@@ -20,9 +20,16 @@ let state = {
   curvePoints: [],    // [{x: temp, y: value}] working copy
 };
 
+/** Abort a fetch after *ms* milliseconds. */
+function fetchWithTimeout(url, opts = {}, ms = 5000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 /** GET an API endpoint, return parsed JSON data field (or throw). */
 async function apiGet(path) {
-  const r = await fetch(API_BASE + path);
+  const r = await fetchWithTimeout(API_BASE + path);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const j = await r.json();
   if (j.status !== "ok") throw new Error(j.message || "API error");
@@ -31,7 +38,7 @@ async function apiGet(path) {
 
 /** Send a GET to a command endpoint. */
 async function apiCmd(path) {
-  const r = await fetch(API_BASE + path);
+  const r = await fetchWithTimeout(API_BASE + path);
   const j = await r.json();
   return j;
 }
@@ -77,6 +84,8 @@ function updateStatus(which) {
   if (which === "ok") {
     dot.classList.add("ok");
     txt.textContent = "Connected";
+  } else if (which === "connecting") {
+    txt.textContent = "Connecting…";
   } else {
     dot.classList.add("error");
     txt.textContent = "Disconnected";
@@ -613,6 +622,15 @@ function showAssignUI(profileName) {
 // =========================================================================
 // 8.  Initialisation
 // =========================================================================
+
+// Wake-up handler — force an immediate reconnect when the tab becomes
+// visible after sleep / hibernation / background-tab switch.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    updateStatus("connecting");
+    poll();
+  }
+});
 
 async function init() {
   // Load profiles
