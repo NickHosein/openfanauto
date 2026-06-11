@@ -199,6 +199,9 @@ class SerialHardware(object):
             if not isinstance(payload, (str, bytes, bytearray)):
                 raise TypeError("Serial_transaction expects str/bytes/bytearray")
 
+            if not self.handle_serial_send(payload):
+                raise _serial.SerialException(f"Failed to send command: {payload}")
+
             # Check if any messages were received
             while self.port.in_waiting:
                 lines.append(self.handle_serial_read())
