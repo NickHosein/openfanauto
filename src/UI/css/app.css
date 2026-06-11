@@ -1,25 +1,17 @@
 /* OpenFanAuto — custom styles (Tabler overrides) */
 
 .status-dot {
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   display: inline-block;
-  flex-shrink: 0;
   background-color: var(--tblr-warning);
-  transition: background-color 0.3s ease;
 }
 .status-dot.ok {
   background-color: var(--tblr-success);
-  box-shadow: 0 0 8px rgba(var(--tblr-success-rgb), 0.5);
 }
 .status-dot.error {
   background-color: var(--tblr-danger);
-  box-shadow: 0 0 8px rgba(var(--tblr-danger-rgb), 0.5);
-}
-
-#status-text {
-  font-size: 0.95rem;
 }
 
 .fan-tile {
