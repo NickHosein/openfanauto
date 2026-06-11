@@ -48,34 +48,28 @@ async function apiCmd(path) {
 // =========================================================================
 
 async function poll() {
-  // Fire fan + sensor requests in parallel — don't wait for slow sensors
-  const [fanResult, sensorResult] = await Promise.allSettled([
-    apiGet("/api/v0/fan/status"),
-    apiGet("/api/v0/sensors"),
-  ]);
-
   // Fan status (critical for UI)
-  if (fanResult.status === "fulfilled") {
-    const fanData = fanResult.value;
+  try {
+    const fanData = await apiGet("/api/v0/fan/status");
     state.fans = (fanData.fans || []).map(f => ({
       ...f,
       rpm: (fanData.rpm || {})[f.id] || 0,
     }));
     updateStatus("ok");
-  } else {
+  } catch (e) {
     updateStatus("error");
-    console.error("Fan poll error:", fanResult.reason);
+    console.error("Fan poll error:", e);
   }
 
   // Sensors (best-effort — don't break fans if this fails)
-  if (sensorResult.status === "fulfilled") {
-    const sensorData = sensorResult.value;
+  try {
+    const sensorData = await apiGet("/api/v0/sensors");
     state.temps = (sensorData && sensorData.temperatures) || {};
     state.diskIds = (sensorData && sensorData.disk_ids) || {};
-  } else {
+  } catch (e) {
     state.temps = {};
     state.diskIds = {};
-    console.warn("Sensor poll failed:", sensorResult.reason);
+    console.warn("Sensor poll failed:", e);
   }
 
   renderFanTiles();
