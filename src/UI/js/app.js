@@ -48,14 +48,11 @@ async function apiCmd(path) {
 // =========================================================================
 
 async function poll() {
-  console.debug("[poll] fetching fan + sensor data...");
   // Fire fan + sensor requests in parallel — don't wait for slow sensors
   const [fanResult, sensorResult] = await Promise.allSettled([
     apiGet("/api/v0/fan/status"),
     apiGet("/api/v0/sensors"),
   ]);
-
-  console.debug("[poll] fan:", fanResult.status, "sensor:", sensorResult.status);
 
   // Fan status (critical for UI)
   if (fanResult.status === "fulfilled") {
@@ -87,7 +84,6 @@ async function poll() {
 }
 
 function updateStatus(which) {
-  console.debug("[status] →", which);
   const txt = document.getElementById("status-text");
   txt.className = "fw-semibold";
   if (which === "ok") {

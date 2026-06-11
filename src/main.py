@@ -147,7 +147,7 @@ def make_app(
 def main() -> None:
     args = parse_args()
 
-    if args.debug or os.environ.get("OPENFAN_LOG_LEVEL", "").lower() == "debug":
+    if args.debug:
         set_logger_level("debug")
     else:
         set_logger_level("info")
